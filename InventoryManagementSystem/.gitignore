@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+build/
+dist/
+*.log
+.vercel/
+.DS_Store
+Thumbs.db
+.git_backup/
