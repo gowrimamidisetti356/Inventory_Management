@@ -1,21 +1,6 @@
-# Environment variables and secrets
+
+node_modules/
 .env
 .env.*
 !.env.example
-
-# Node.js dependencies
-node_modules/
-
-# Build files
-build/
-dist/
-coverage/
-
-# Logs
 *.log
-npm-debug.log*
-
-# Editor and OS files
-.vscode/
-.DS_Store
-Thumbs.db
