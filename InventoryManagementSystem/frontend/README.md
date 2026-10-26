@@ -14,6 +14,13 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
 
+### Backend API
+
+The frontend sends requests to `https://YOUR-BACKEND-URL.vercel.app` by default.
+Set `REACT_APP_API_URL` to your deployed backend's origin before building, for
+example `REACT_APP_API_URL=https://your-backend.vercel.app`. The API endpoints
+are `/api/products` and `/api/health`.
+
 ### `npm test`
 
 Launches the test runner in the interactive watch mode.\
