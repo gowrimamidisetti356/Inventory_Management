@@ -1,5 +1,5 @@
 // backend/controllers/productController.js
-const Product = require('../models/Product');
+const Product = require('../models/product');
 
 // Get all products (READ)
 exports.getProducts = async (req, res) => {
