@@ -21,6 +21,7 @@ app.use(express.json({ limit: '1mb' }));
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://inventory-management-gowri9.vercel.app',
     ...(process.env.FRONTEND_URL || '')
         .split(',')
         .map(origin => origin.trim().replace(/\/$/, ''))
