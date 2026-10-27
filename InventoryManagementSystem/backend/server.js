@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 
 const express = require('express');
@@ -6,38 +7,41 @@ const cors = require('cors');
 
 const app = express();
 
-// ========================================
-// 1. EXPRESS CONFIGURATION
-// ========================================
-
 app.disable('x-powered-by');
 
-app.use(express.json({ limit: '1mb' }));
-
 // ========================================
-// 2. CORS CONFIGURATION
+// 1. CORS CONFIGURATION
 // ========================================
 
+// IMPORTANT: Use plain URLs, without Markdown formatting.
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://inventory-management-gowri9.vercel.app',
-    ...(process.env.FRONTEND_URL || '')
-        .split(',')
-        .map(origin => origin.trim().replace(/\/$/, ''))
-        .filter(Boolean)
+    'https://inventory-management-tau-sage.vercel.app',
+    'https://inventory-management-gowri9.vercel.app'
+];
+
+// Add additional frontend origins through Vercel environment variables.
+const environmentOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map(origin => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+const permittedOrigins = [
+    ...new Set([...allowedOrigins, ...environmentOrigins])
 ];
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests without an Origin header.
+        // Allow requests without an Origin header, such as
+        // direct server-to-server requests.
         if (!origin) {
             return callback(null, true);
         }
 
-        const normalizedOrigin = origin.replace(/\/$/, '');
+        const normalizedOrigin = origin.replace(/\/+$/, '');
 
-        if (allowedOrigins.includes(normalizedOrigin)) {
+        if (permittedOrigins.includes(normalizedOrigin)) {
             return callback(null, true);
         }
 
@@ -47,6 +51,7 @@ app.use(cors({
             new Error('Origin not allowed by CORS')
         );
     },
+
     methods: [
         'GET',
         'POST',
@@ -55,59 +60,66 @@ app.use(cors({
         'DELETE',
         'OPTIONS'
     ],
+
     allowedHeaders: [
         'Content-Type',
         'Authorization'
-    ]
+    ],
+
+    optionsSuccessStatus: 204
 }));
 
+// Parse JSON only after registering CORS.
+app.use(express.json({ limit: '1mb' }));
+
 // ========================================
-// 3. MONGODB CONNECTION
+// 2. MONGODB CONNECTION
 // ========================================
 
 let connectionPromise = null;
 
 async function connectDB() {
-    // Reuse an existing connection.
+    // Reuse an established connection.
     if (mongoose.connection.readyState === 1) {
         return mongoose.connection;
     }
 
-    // Check the required environment variable.
+    // Validate the required environment variable.
     if (!process.env.MONGO_URI) {
         throw new Error(
             'MONGO_URI environment variable is missing'
         );
     }
 
-    // Reuse an in-progress connection attempt.
+    // Reuse an existing connection attempt.
     if (!connectionPromise) {
         connectionPromise = mongoose.connect(
             process.env.MONGO_URI,
             {
                 serverSelectionTimeoutMS: 10000
             }
-        ).then(() => {
-            console.log('MongoDB connected successfully');
+        )
+            .then(() => {
+                console.log('MongoDB connected successfully');
+                return mongoose.connection;
+            })
+            .catch((error) => {
+                connectionPromise = null;
 
-            return mongoose.connection;
-        }).catch((error) => {
-            connectionPromise = null;
+                console.error(
+                    'MongoDB connection failed:',
+                    error.message
+                );
 
-            console.error(
-                'MongoDB connection failed:',
-                error.message
-            );
-
-            throw error;
-        });
+                throw error;
+            });
     }
 
     return connectionPromise;
 }
 
 // ========================================
-// 4. ROOT ROUTE
+// 3. ROOT ROUTE
 // ========================================
 
 app.get('/', (req, res) => {
@@ -122,7 +134,7 @@ app.get('/', (req, res) => {
 });
 
 // ========================================
-// 5. HEALTH CHECK
+// 4. HEALTH CHECK
 // ========================================
 
 app.get('/api/health', async (req, res) => {
@@ -150,7 +162,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ========================================
-// 6. LOAD PRODUCT ROUTES
+// 5. LOAD PRODUCT ROUTES
 // ========================================
 
 const productRoutes = require('./routes/products');
@@ -159,7 +171,7 @@ const productRoutes = require('./routes/products');
 app.use('/api/products', async (req, res, next) => {
     try {
         await connectDB();
-        next();
+        return next();
     } catch (error) {
         console.error(
             'Product database connection failed:',
@@ -173,10 +185,11 @@ app.use('/api/products', async (req, res, next) => {
     }
 });
 
+// Register existing product routes.
 app.use('/api/products', productRoutes);
 
 // ========================================
-// 7. HANDLE UNKNOWN ROUTES
+// 6. HANDLE UNKNOWN ROUTES
 // ========================================
 
 app.use((req, res) => {
@@ -188,7 +201,7 @@ app.use((req, res) => {
 });
 
 // ========================================
-// 8. GLOBAL ERROR HANDLER
+// 7. GLOBAL ERROR HANDLER
 // ========================================
 
 app.use((err, req, res, next) => {
@@ -219,23 +232,20 @@ app.use((err, req, res, next) => {
 });
 
 // ========================================
-// 9. EXPORT APPLICATION FOR VERCEL
+// 8. EXPORT APPLICATION FOR VERCEL
 // ========================================
 
 module.exports = app;
 
 // ========================================
-// 10. LOCAL DEVELOPMENT SERVER
+// 9. LOCAL DEVELOPMENT SERVER
 // ========================================
 
-// Vercel imports the application without starting
-// a separate listening server.
+// Vercel imports the app without calling app.listen().
 if (require.main === module) {
     const PORT = process.env.PORT || 5001;
 
     app.listen(PORT, () => {
-        console.log(
-            `Server running at http://localhost:${PORT}`
-        );
+        console.log(`Server running at http://localhost:${PORT}`);
     });
 }
